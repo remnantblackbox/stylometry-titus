@@ -22,10 +22,21 @@ def read_folder_into_dict(path):
             texts[name] = f.read()
     return texts
 
-play_by_author = {}
+plays_by_author = {}
 
 for author, plays in corpus.items():
-    play_by_author[author] = read_folder_into_string(plays)
+    plays_by_author[author] = read_folder_into_string(plays)
 
 titus_acts = read_folder_into_dict('corpus/disputed')
 
+def tokenize_corpus(texts):
+    tokenized = {}
+    for name, text in texts.items():
+        tokens = nltk.word_tokenize(text)
+        tokens = [token for token in tokens if any(c.isalpha() for c in token)]
+        tokens = [tok.lower() for tok in tokens]
+        tokenized[name] = tokens
+    return tokenized
+
+plays_by_author_tokens = tokenize_corpus(plays_by_author)
+titus_acts_tokens = tokenize_corpus(titus_acts)

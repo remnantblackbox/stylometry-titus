@@ -2,19 +2,15 @@ import os
 import nltk
 import math
 
-corpus = {
+authors_folder = {
     'Peele': 'corpus/peele',
     'Shakespeare': 'corpus/shakespeare'
 }
 
-def read_folder_into_string(path):
-    strings = []
-    for filename in sorted(os.listdir(path)):
-        with open(os.path.join(path, filename), 'r', encoding='utf-8') as f:
-            strings.append(f.read())
-    return '\n'.join(strings)
+titus_folder = 'corpus/disputed'
 
-def read_folder_into_dict(path):
+def read_folder_texts(path: str) -> dict[str, str]:
+    """Read every file in a folder and return a dict {filename: text}"""
     texts = {}
     for filename in sorted(os.listdir(path)):
         name = os.path.splitext(filename)[0]
@@ -22,21 +18,20 @@ def read_folder_into_dict(path):
             texts[name] = f.read()
     return texts
 
-plays_by_author = {}
-
-for author, plays in corpus.items():
-    plays_by_author[author] = read_folder_into_string(plays)
-
-titus_acts = read_folder_into_dict('corpus/disputed')
-
-def tokenize_corpus(texts):
+def tokenize_corpus(texts: dict[str, str]) -> dict[str, list[str]]:
+    """Tokenize and clean each text in a corpus."""
     tokenized = {}
     for name, text in texts.items():
         tokens = nltk.word_tokenize(text)
-        tokens = [token for token in tokens if any(c.isalpha() for c in token)]
-        tokens = [tok.lower() for tok in tokens]
+        tokens = [token.lower() for token in tokens if any(c.isalpha() for c in token)]
         tokenized[name] = tokens
     return tokenized
+
+# merge each author's play in a single string because distinction by play is not needed
+plays_by_author = { author: '\n'.join(read_folder_texts(path).values()) for author, path in authors_folder.items()}
+
+# keeping titus act separated to test each act individually against each author's corpus
+titus_acts = read_folder_texts(titus_folder)
 
 plays_by_author_tokens = tokenize_corpus(plays_by_author)
 titus_acts_tokens = tokenize_corpus(titus_acts)

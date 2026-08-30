@@ -1,4 +1,6 @@
 import os
+import nltk
+import math
 
 corpus = {
     'Peele': 'corpus/peele',
@@ -27,8 +29,3 @@ for author, plays in corpus.items():
 
 titus_acts = read_folder_into_dict('corpus/disputed')
 
-for author in corpus:
-    print(author, '-', play_by_author[author][:100])
-
-for act in titus_acts:
-    print(act, '-', titus_acts[act][:100])

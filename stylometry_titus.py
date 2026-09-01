@@ -49,7 +49,6 @@ def calculate_feature_freqs(tokens: list[str], features: list[str]) -> dict[str,
     overall = len(tokens)
     return {feature: tokens.count(feature) / overall for feature in features}
 
-
 def calculate_zscores(freqs: dict[str, float], corpus_features: dict[str, dict[str, float]]) -> dict[str, float]:
     """Convert feature frequencies into z-scores relative to the corpus norm"""
     zscores = {}
@@ -58,3 +57,16 @@ def calculate_zscores(freqs: dict[str, float], corpus_features: dict[str, dict[s
         stdev = corpus_features[feature]["StdDev"]
         zscores[feature] = (freq - mean) / stdev
     return zscores
+
+def evaluate_test_case(tokens: list[str], features: list[str], corpus_features: dict[str, dict[str, float]]) -> dict[str, float]:
+    """Compute z-scores for a set of tokens (a test case) against the corpus norm."""
+    freqs = calculate_feature_freqs(tokens, features)
+    return calculate_zscores(freqs, corpus_features)
+
+def compute_delta(testcase_zscores: dict[str, float], feature_zscores: dict[str, dict[str, float]], features: list[str]) -> dict[str, float]:
+    """Compute Burrows' Delta between a test case and each candidate author."""
+    deltas = {}
+    for author, author_zscores in feature_zscores.items():
+        delta = sum(math.fabs(testcase_zscores[feature] - author_zscores[feature]) for feature in features)
+        deltas[author] = delta / len(features)
+    return deltas

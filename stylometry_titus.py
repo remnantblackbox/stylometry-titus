@@ -28,10 +28,18 @@ def tokenize_corpus(texts: dict[str, str]) -> dict[str, list[str]]:
     return tokenized
 
 # merge each author's play in a single string because distinction by play is not needed
-plays_by_author = { author: '\n'.join(read_folder_texts(path).values()) for author, path in authors_folder.items()}
+plays_by_author = {author: '\n'.join(read_folder_texts(path).values()) for author, path in authors_folder.items()}
 
 # keeping titus act separated to test each act individually against each author's corpus
 titus_acts = read_folder_texts(titus_folder)
 
 plays_by_author_tokens = tokenize_corpus(plays_by_author)
 titus_acts_tokens = tokenize_corpus(titus_acts)
+
+# building a whole corpus (authors only) to get the 30 most frequent words
+whole_corpus = []
+for author in plays_by_author.keys():
+    whole_corpus += plays_by_author_tokens[author]
+
+whole_corpus_freq_dist = list(nltk.FreqDist(whole_corpus).most_common(30))
+features = [word for word, freq in whole_corpus_freq_dist]

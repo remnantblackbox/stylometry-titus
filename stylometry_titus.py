@@ -42,11 +42,8 @@ whole_corpus = []
 for author in plays_by_author.keys():
     whole_corpus += plays_by_author_tokens[author]
 
-whole_corpus_freq_dist = list(nltk.FreqDist(whole_corpus).most_common(30))
-features = [word for word, freq in whole_corpus_freq_dist]
-
 def calculate_feature_freqs(tokens: list[str], features: list[str]) -> dict[str, float]:
-    """Compute each feature's frequency in a token list, as a share of total tokens"""
+    """Calculate each feature's frequency in a token list, as a share of total tokens"""
     overall = len(tokens)
     return {feature: tokens.count(feature) / overall for feature in features}
 
@@ -60,7 +57,7 @@ def calculate_zscores(freqs: dict[str, float], corpus_features: dict[str, dict[s
     return zscores
 
 def evaluate_test_case(tokens: list[str], features: list[str], corpus_features: dict[str, dict[str, float]]) -> dict[str, float]:
-    """Compute z-scores for a set of tokens (a test case) against the corpus norm."""
+    """Calculate z-scores for a set of tokens (a test case) against the corpus norm."""
     freqs = calculate_feature_freqs(tokens, features)
     return calculate_zscores(freqs, corpus_features)
 
@@ -72,46 +69,47 @@ def compute_delta(testcase_zscores: dict[str, float], feature_zscores: dict[str,
         deltas[author] = delta / len(features)
     return deltas
 
-# author's feature frequencies
-feature_freqs = {
-    author: calculate_feature_freqs(plays_by_author_tokens[author], features)
-    for author in plays_by_author.keys()
-}
+# delta analysis flow to check results with different numbers most frequent words
+def run_delta_analysis(n_mfw: int):
+    # top-n most frequent words as stylometric features
+    features = [word for word, freq in nltk.FreqDist(whole_corpus).most_common(n_mfw)]
 
-# corpus norm: mean and stdev per feature, across authors
-corpus_features = {}
-num_authors = len(plays_by_author)
+    # author's feature frequencies
+    feature_freqs = {
+        author: calculate_feature_freqs(plays_by_author_tokens[author], features)
+        for author in plays_by_author.keys()
+    }
 
-for feature in features:
-    corpus_features[feature] = {}
+    # corpus norm: mean and stdev per feature, across authors
+    corpus_features = {}
+    num_authors = len(plays_by_author)
 
-    # Mean of means: average each author's frequency for this feature
-    feature_average = 0
-    for author in plays_by_author.keys():
-        feature_average += feature_freqs[author][feature]
-    feature_average /= num_authors
-    corpus_features[feature]["Mean"] = feature_average
+    for feature in features:
+        corpus_features[feature] = {}
 
-    # Standard deviation (sample formula) across authors
-    feature_stdev = 0
-    for author in plays_by_author.keys():
-        diff = feature_freqs[author][feature] - corpus_features[feature]["Mean"]
-        feature_stdev += diff * diff
-    feature_stdev /= (num_authors - 1)
-    feature_stdev = math.sqrt(feature_stdev)
-    corpus_features[feature]["StdDev"] = feature_stdev
+        # mean of means: average each author's frequency for this feature
+        feature_average = sum(feature_freqs[author][feature] for author in plays_by_author.keys()) / num_authors
+        corpus_features[feature]["Mean"] = feature_average
 
-# authors z-scores
-feature_zscores = {
-    author: calculate_zscores(feature_freqs[author], corpus_features)
-    for author in plays_by_author.keys()
-}
+        # standard deviation (sample formula) across authors
+        feature_stdev = sum((feature_freqs[author][feature] - feature_average) ** 2 for author in plays_by_author.keys())
+        feature_stdev = math.sqrt(feature_stdev / (num_authors - 1))
+        corpus_features[feature]["StdDev"] = feature_stdev
 
-# calculate Delta for each titus act
-for act, tokens in titus_acts_tokens.items():
-    act_zscores = evaluate_test_case(tokens, features, corpus_features)
-    act_deltas = compute_delta(act_zscores, feature_zscores, features)
+    # authors z-scores
+    feature_zscores = {
+        author: calculate_zscores(feature_freqs[author], corpus_features)
+        for author in plays_by_author.keys()
+    }
 
-    print(f"\nDelta scores for {act}:")
-    for author, delta in act_deltas.items():
-        print(f"  {author}: {delta:.4f}")
+    # calculate Delta for each titus act
+    print(f"\n---- Results with {n_mfw} most frequent words ----")
+    for act, tokens in titus_acts_tokens.items():
+        act_zscores = evaluate_test_case(tokens, features, corpus_features)
+        act_deltas = compute_delta(act_zscores, feature_zscores, features)
+        winner = min(act_deltas, key=act_deltas.get)
+        print(f"{act}: {winner} ({act_deltas[winner]:.4f}) -- Peele: {act_deltas['Peele']:.4f}, Shakespeare: {act_deltas['Shakespeare']:.4f}")
+
+# robustness check against different top-n most frequent words
+for n in (30, 50, 100, 200):
+    run_delta_analysis(n)

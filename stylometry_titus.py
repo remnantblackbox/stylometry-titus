@@ -1,6 +1,7 @@
 import os
 import nltk
 import math
+nltk.download('punkt_tab')
 
 authors_folder = {
     'Peele': 'corpus/peele',
@@ -70,3 +71,47 @@ def compute_delta(testcase_zscores: dict[str, float], feature_zscores: dict[str,
         delta = sum(math.fabs(testcase_zscores[feature] - author_zscores[feature]) for feature in features)
         deltas[author] = delta / len(features)
     return deltas
+
+# author's feature frequencies
+feature_freqs = {
+    author: calculate_feature_freqs(plays_by_author_tokens[author], features)
+    for author in plays_by_author.keys()
+}
+
+# corpus norm: mean and stdev per feature, across authors
+corpus_features = {}
+num_authors = len(plays_by_author)
+
+for feature in features:
+    corpus_features[feature] = {}
+
+    # Mean of means: average each author's frequency for this feature
+    feature_average = 0
+    for author in plays_by_author.keys():
+        feature_average += feature_freqs[author][feature]
+    feature_average /= num_authors
+    corpus_features[feature]["Mean"] = feature_average
+
+    # Standard deviation (sample formula) across authors
+    feature_stdev = 0
+    for author in plays_by_author.keys():
+        diff = feature_freqs[author][feature] - corpus_features[feature]["Mean"]
+        feature_stdev += diff * diff
+    feature_stdev /= (num_authors - 1)
+    feature_stdev = math.sqrt(feature_stdev)
+    corpus_features[feature]["StdDev"] = feature_stdev
+
+# authors z-scores
+feature_zscores = {
+    author: calculate_zscores(feature_freqs[author], corpus_features)
+    for author in plays_by_author.keys()
+}
+
+# calculate Delta for each titus act
+for act, tokens in titus_acts_tokens.items():
+    act_zscores = evaluate_test_case(tokens, features, corpus_features)
+    act_deltas = compute_delta(act_zscores, feature_zscores, features)
+
+    print(f"\nDelta scores for {act}:")
+    for author, delta in act_deltas.items():
+        print(f"  {author}: {delta:.4f}")

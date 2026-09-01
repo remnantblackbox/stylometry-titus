@@ -43,3 +43,18 @@ for author in plays_by_author.keys():
 
 whole_corpus_freq_dist = list(nltk.FreqDist(whole_corpus).most_common(30))
 features = [word for word, freq in whole_corpus_freq_dist]
+
+def calculate_feature_freqs(tokens: list[str], features: list[str]) -> dict[str, float]:
+    """Compute each feature's frequency in a token list, as a share of total tokens"""
+    overall = len(tokens)
+    return {feature: tokens.count(feature) / overall for feature in features}
+
+
+def calculate_zscores(freqs: dict[str, float], corpus_features: dict[str, dict[str, float]]) -> dict[str, float]:
+    """Convert feature frequencies into z-scores relative to the corpus norm"""
+    zscores = {}
+    for feature, freq in freqs.items():
+        mean = corpus_features[feature]["Mean"]
+        stdev = corpus_features[feature]["StdDev"]
+        zscores[feature] = (freq - mean) / stdev
+    return zscores

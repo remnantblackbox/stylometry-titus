@@ -45,9 +45,9 @@ That's as far as I would take these results. As I described, this experiment use
 
 ## Running the experiment
 Requires Python 3.10+ and NLTK.
-```bash
+```
 pip install -r requirements.txt
-python stylometry.py
+python stylometry_titus.py
 ```
 The script downloads the `punkt_tab` data required by NLTK’s Punkt tokenizer on its first run.
 
